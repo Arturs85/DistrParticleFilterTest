@@ -1,0 +1,11 @@
+package sample;
+
+public enum RobotState {
+    IDLE,
+    MOVEMENT,
+    MOVING_PARTICLES,
+    SUSPENDING_AFTER_MEASUREMENT,
+    TURNING,
+REPOPULATE_PARTICLES,
+    PREPARE_MOVE
+}
