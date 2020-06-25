@@ -12,13 +12,13 @@ public class ParticleSet {
     static final int PARTICLE_COUNT = 100;
     static final int PARTICLE_SIZE = 3;
     static final double TRAVEL_ERR = 0.05;
-    static final double TURN_ERR = Math.toRadians(5);
+    static final double TURN_ERR = Math.toRadians(15);
 
     static final int dirLine = 10;
 
     ArrayList<Particle> particles = new ArrayList<>(PARTICLE_COUNT);
     Random rnd = new Random();
-    int distRadius = 30;
+    int distRadius = 10;
     PublicPartOfAgent owner;
     Point previousPoint = new Point(0, 0);
 
@@ -143,6 +143,10 @@ public class ParticleSet {
             if (particles.get(i).isValid) valid.add(i);
         }
 //
+        if(valid.size() <= 0){
+            initializeParticles(owner,0,0);// todo initialize from previous location
+        return;
+        }
         int i = 0;
         for (Particle p : particles) {
             if (p.isValid) continue;
@@ -155,11 +159,18 @@ public class ParticleSet {
     }
 
     void suspendAfterMeasurement(int[] m) {
-        int cx = m[0] + (m[1] - m[0]) / 2;
-        int cy = m[2] + (m[3] - m[2]) / 2;
 
-        int maxDist = m[4] + PublicPartOfAgent.DIST_ERR;
-        int minDist = m[4] - PublicPartOfAgent.DIST_ERR;//negative dist warning
+        int rx =(m[1] - m[0]) / 2;
+        int ry = (m[3] - m[2]) / 2;
+        int cx = m[0] + rx;
+        int cy = m[2] + ry;
+
+        int r =Math.max(rx,ry);//todo upgrade to actual radius in this direction
+int rr = Math.min(rx,ry);
+r = (r+rr)/2;
+
+        int maxDist = m[4] +r+ PublicPartOfAgent.DIST_ERR;
+        int minDist = m[4] -r- PublicPartOfAgent.DIST_ERR;//negative dist warning
         int susp = 0;
         for (Particle p : particles) {
             int dist = (int) (Math.sqrt((p.x - cx) * (p.x - cx) + (p.y - cy) * (p.y - cy)));

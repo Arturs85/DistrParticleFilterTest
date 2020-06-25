@@ -243,6 +243,14 @@ dirBeforeTurning = direction;
 
         double dis = Math.sqrt(dx * dx + dy * dy);//optionally add measurement error
         dis = dis + ps.rnd.nextGaussian() * DIST_ERR;
+
+        if(otherAgent.movementMode==MovementMode.TO_TARGET){
+            //update particle distribution
+           double  dist = otherAgent.odometryTotal - otherAgent.odoBeforeTravel;
+        otherAgent.ps.moveParticles((int)dist);
+        otherAgent.odoBeforeTravel = otherAgent.odometryTotal;//restart dist counter
+        }
+
         int[] dxdy = otherAgent.ps.getParticlesDxDy();
         dxdy[4] = (int) dis;
         return dxdy;

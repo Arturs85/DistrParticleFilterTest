@@ -39,6 +39,9 @@ public List<PublicPartOfAgent> publicPartsOfAgents = new ArrayList<>();
             a.movementStep();
         a.draw();
         }
+        if(simTime==1000)publicPartsOfAgents.get(2).moveForwardBy(100);
+        if(simTime==1100)publicPartsOfAgents.get(1).moveForwardBy(100);
+
     }
 
 
