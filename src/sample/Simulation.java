@@ -11,7 +11,7 @@ import java.util.List;
 
 public class Simulation {
     public Controller controller;
-    int simStepDefDuration = 20;//50
+    int simStepDefDuration = 5;//20;//50
     Space2D board;
     int simTimeFactor = 1;
     Timeline timeline;
@@ -20,7 +20,8 @@ public class Simulation {
 boolean isPaused = false;
     private final int SIM_TIME_LIMIT=2001;
 public List<PublicPartOfAgent> publicPartsOfAgents = new ArrayList<>();
-
+//int frames =0;
+int redrawInterval =20;
 
 //public List<PublicPartOfAgent> agents=new ArrayList<>(10);
 
@@ -28,19 +29,23 @@ public List<PublicPartOfAgent> publicPartsOfAgents = new ArrayList<>();
         this.board=board;
         timeline = new Timeline(new KeyFrame(Duration.millis(simStepDefDuration), ae -> simulationStep()));
         timeline.setCycleCount(Animation.INDEFINITE);
-    timeline.play();
+   timeline.play();
 
     }
 
     synchronized void simulationStep() {
         simTime++;
+       if(simTime%redrawInterval==0)
         board.draw();
         for (PublicPartOfAgent a : publicPartsOfAgents) {
             a.movementStep();
-        a.draw();
+
+            if(simTime%redrawInterval==0)
+       a.draw();
         }
         if(simTime==1000)publicPartsOfAgents.get(2).moveForwardBy(100);
-        if(simTime==1100)publicPartsOfAgents.get(1).moveForwardBy(100);
+       if(simTime==1500)publicPartsOfAgents.get(1).moveForwardBy(100);
+        //if(simTime==2000)publicPartsOfAgents.get(0).moveForwardBy(100);
 
     }
 

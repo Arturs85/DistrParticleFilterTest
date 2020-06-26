@@ -119,6 +119,20 @@ public class ParticleSet {
         Point r = new Point((int) xSum / validParticles, (int) ySum / validParticles);
         return r;
     }
+    Point getAverageParticleWInvalid() {//wo direction
+
+        double xSum = 0;
+        double ySum = 0;
+        for (Particle p : particles) {
+
+            xSum += p.x;
+            ySum += p.y;
+        }
+
+
+        Point r = new Point((int) xSum / PARTICLE_COUNT, (int) ySum / PARTICLE_COUNT);
+        return r;
+    }
 
     void regenerateParticles() {
         Point c = getAverageParticle();
@@ -144,7 +158,8 @@ public class ParticleSet {
         }
 //
         if(valid.size() <= 0){
-            initializeParticles(owner,0,0);// todo initialize from previous location
+           Point c = getAverageParticleWInvalid();
+            initializeParticles(owner,c.x,c.y);// todo initialize from previous location
         return;
         }
         int i = 0;
@@ -175,6 +190,22 @@ r = (r+rr)/2;
         for (Particle p : particles) {
             int dist = (int) (Math.sqrt((p.x - cx) * (p.x - cx) + (p.y - cy) * (p.y - cy)));
             if (dist > maxDist || dist < minDist) {
+                p.isValid = false;
+                susp++;
+            }
+        }
+        System.out.println("susp = " + susp);
+
+    }
+    void suspendAfterMeasurementMinMax(int[] m) {
+
+       //array contents: n.x, n.y, f.x, f,y, distMeasure
+        int susp = 0;
+        for (Particle p : particles) {
+            int minDist = (int) (Math.sqrt((p.x - m[0]) * (p.x - m[0]) + (p.y - m[1]) * (p.y - m[1])))-PublicPartOfAgent.DIST_ERR;
+            int maxDist = (int) (Math.sqrt((p.x - m[2]) * (p.x - m[2]) + (p.y - m[3]) * (p.y - m[3])))+PublicPartOfAgent.DIST_ERR;
+
+            if (m[4] > maxDist || m[4] < minDist) {
                 p.isValid = false;
                 susp++;
             }

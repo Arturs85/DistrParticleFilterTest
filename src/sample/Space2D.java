@@ -45,8 +45,10 @@ public class Space2D {
     void draw(Canvas canvas) {
         //background
         GraphicsContext g = canvas.getGraphicsContext2D();
+       g.beginPath();
+
         g.setFill(Color.WHITE);  // fill with white background
-        g.fillRect(0+cellsOffset, 0+cellsOffset,width, height);
+        g.fillRect(0, 0,canvas.getWidth(), canvas.getHeight());
         g.strokeRect(0+cellsOffset, 0+cellsOffset, width, height);
         // draw obst
         g.setFill(Color.GRAY);  // fill with white background
@@ -54,6 +56,8 @@ public class Space2D {
         for (javafx.scene.shape.Rectangle r:obstacles) {
             g.fillRect(r.getX()* PublicPartOfAgent.scale+cellsOffset,r.getY()+cellsOffset,r.getWidth(),r.getHeight());
         }
+g.closePath();
+ //System.gc();
     }
 
 

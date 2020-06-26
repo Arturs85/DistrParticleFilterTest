@@ -7,6 +7,7 @@ import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.paint.Color;
 import javafx.scene.shape.Rectangle;
 
+import java.awt.*;
 import java.util.ArrayList;
 import java.util.Random;
 
@@ -46,9 +47,12 @@ public class PublicPartOfAgent {
     double odoBeforeTravel = 0;
     RobotState state = RobotState.IDLE;
     RobotState nextStateAfterPause = RobotState.IDLE;
-    static final int targetAgentCount = 3;
+    static final int targetAgentCount = 4;
     int previousMeasureTargetNr = -1;
-double dirBeforeTurning=0;
+    double dirBeforeTurning = 0;
+    int measurementCountInCycle = 0;
+ArrayList<Integer> dists = new ArrayList<>(1000);
+    ArrayList<Integer> areas = new ArrayList<>(1000);
 
     PublicPartOfAgent(Space2D space2D, Simulation simulation) {
         this.space2D = space2D;
@@ -82,8 +86,12 @@ double dirBeforeTurning=0;
 
     int getNextTargetNr() {
         previousMeasureTargetNr++;
+        if (previousMeasureTargetNr == agentNumber)
+            previousMeasureTargetNr++; //dont measure own distance
         if (previousMeasureTargetNr >= targetAgentCount)
             previousMeasureTargetNr = 0;
+
+        measurementCountInCycle++;
 
         return previousMeasureTargetNr;
     }
@@ -131,7 +139,7 @@ double dirBeforeTurning=0;
     public void turnRightBy(double angleRadians) {
         movementMode = MovementMode.TO_ANGLE;
         angleRemaining = Math.abs(angleRadians);
-dirBeforeTurning = direction;
+        dirBeforeTurning = direction;
     }
 
     void manualMovementStep() {
@@ -147,6 +155,7 @@ dirBeforeTurning = direction;
     }
 
     void movementStep() {
+
         switch (state) {
             case IDLE:
                 if (!simulation.isPaused) {
@@ -191,18 +200,20 @@ dirBeforeTurning = direction;
                 break;
 
             case SUSPENDING_AFTER_MEASUREMENT:
-                int[] meas = measureDistance(simulation.publicPartsOfAgents.get(getNextTargetNr()));
+                //int[] meas = measureDistance(simulation.publicPartsOfAgents.get(getNextTargetNr()));
+                int[] meas = measureDistanceMinMax(simulation.publicPartsOfAgents.get(getNextTargetNr()));
 
                 System.out.println("meas = " + meas[0] + " " + meas[1] + " " + meas[2] + " " + meas[3] + " " + meas[4]);
 
-                ps.suspendAfterMeasurement(meas);
+                //  ps.suspendAfterMeasurement(meas);
+                ps.suspendAfterMeasurementMinMax(meas);
                 setNextStateAfterPause(RobotState.REPOPULATE_PARTICLES);
                 break;
 
             case REPOPULATE_PARTICLES:
                 // ps.regenerateParticles();
                 ps.regenerateParticles2();
-                if (previousMeasureTargetNr == targetAgentCount - 1) {//measurement cycle is over
+                if (measurementCountInCycle % (targetAgentCount - 1) == 0) {//measurement cycle is over
                     setNextStateAfterPause(RobotState.TURNING);
                 } else
                     setNextStateAfterPause(RobotState.SUSPENDING_AFTER_MEASUREMENT);
@@ -210,6 +221,14 @@ dirBeforeTurning = direction;
                 break;
 
             case TURNING:
+                dists.add(calcDistanceBetweenActualAndParticles());
+                areas.add(calcParticlesAreaSidesSum());
+
+                if(agentNumber==3){
+                    if(dists.size()%50==0)
+                    printStatistics();
+                }
+
                 turnRightBy(Math.toRadians(ps.rnd.nextFloat() * 120 + 60));
                 state = RobotState.MOVEMENT;
                 break;
@@ -218,10 +237,24 @@ dirBeforeTurning = direction;
 
     }
 
+    int calcDistanceBetweenActualAndParticles() {
+        Point c = ps.getAverageParticle();
+        double dx = c.x - x;
+        double dy = c.y - y;
+        double dist = Math.sqrt(dx * dx + dy * dy);
+        return (int) dist;
+    }
+
+    int calcParticlesAreaSidesSum() {
+        int[] r = ps.getParticlesDxDy();
+
+        return Math.abs(r[0] - r[1]) + Math.abs(r[2] - r[3]);
+    }
+
     void setNextStateAfterPause(RobotState stateAfterPause) {
         state = RobotState.IDLE;
         nextStateAfterPause = stateAfterPause;
-       // simulation.isPaused = true;
+        //  simulation.isPaused = true;
         System.out.println("Paused, stateAfterPause = " + stateAfterPause.name());
     }
 
@@ -244,16 +277,61 @@ dirBeforeTurning = direction;
         double dis = Math.sqrt(dx * dx + dy * dy);//optionally add measurement error
         dis = dis + ps.rnd.nextGaussian() * DIST_ERR;
 
-        if(otherAgent.movementMode==MovementMode.TO_TARGET){
+        if (otherAgent.movementMode == MovementMode.TO_TARGET) {
             //update particle distribution
-           double  dist = otherAgent.odometryTotal - otherAgent.odoBeforeTravel;
-        otherAgent.ps.moveParticles((int)dist);
-        otherAgent.odoBeforeTravel = otherAgent.odometryTotal;//restart dist counter
+            double dist = otherAgent.odometryTotal - otherAgent.odoBeforeTravel;
+            otherAgent.ps.moveParticles((int) dist);
+            otherAgent.odoBeforeTravel = otherAgent.odometryTotal;//restart dist counter
         }
 
         int[] dxdy = otherAgent.ps.getParticlesDxDy();
         dxdy[4] = (int) dis;
         return dxdy;
+
+    }
+
+    public int[] measureDistanceMinMax(PublicPartOfAgent otherAgent) {
+        System.out.println("ag " + agentNumber + " measuring distMinMax to otherAgent = " + otherAgent.agentNumber);
+
+        double dx = x - otherAgent.x;
+        double dy = y - otherAgent.y;
+
+        double dis = Math.sqrt(dx * dx + dy * dy);//optionally add measurement error
+        dis = dis + ps.rnd.nextGaussian() * DIST_ERR;
+
+        if (otherAgent.movementMode == MovementMode.TO_TARGET) {
+            //update particle distribution
+            double dist = otherAgent.odometryTotal - otherAgent.odoBeforeTravel;
+            otherAgent.ps.moveParticles((int) dist);
+            otherAgent.odoBeforeTravel = otherAgent.odometryTotal;//restart dist counter
+        }
+        Point c = ps.getAverageParticle();
+        int[] res = getFarestAndNearestPoints(otherAgent.ps, c);
+        res[4] = (int) dis;
+        return res;
+    }
+
+    int[] getFarestAndNearestPoints(ParticleSet ps, Point p) {
+        double farestDistSaoFar = 0;
+        int farestIndex = 0;
+        double nearestDistSaoFar = Double.MAX_VALUE;
+        int nearestIndex = 0;
+
+        for (int i = 0; i < ps.particles.size(); i++) {
+            int dx = ps.particles.get(i).x - p.x;
+            int dy = ps.particles.get(i).y - p.y;
+            double dis = Math.sqrt(dx * dx + dy * dy);
+            if (dis > farestDistSaoFar) {
+                farestDistSaoFar = dis;
+                farestIndex = i;
+            }
+            if (dis < nearestDistSaoFar) {
+                nearestDistSaoFar = dis;
+                nearestIndex = i;
+            }
+        }
+        int[] res = new int[]{ps.particles.get(nearestIndex).x, ps.particles.get(nearestIndex).y, ps.particles.get(farestIndex).x, ps.particles.get(farestIndex).y, 0};
+        return res;
 
     }
 
@@ -281,15 +359,16 @@ dirBeforeTurning = direction;
     }
 
     void draw() {
+
         ps.draw(canvas);
         GraphicsContext g = canvas.getGraphicsContext2D();
-
+        g.beginPath();
         switch (agentNumber) {
             case 3:
                 g.setStroke(Color.DARKBLUE);
                 break;
             default:
-                g.setStroke(Color.DARKGRAY);
+                g.setStroke(Color.BLACK);
 
         }
 
@@ -322,4 +401,11 @@ dirBeforeTurning = direction;
         return false;
     }
 
+void printStatistics(){
+    System.out.println("dists areas");
+        for (int i = 0; i < dists.size(); i++) {
+        System.out.println( dists.get(i)+" "+areas.get(i));
+    }
+
+}
 }
